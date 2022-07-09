@@ -1,46 +1,68 @@
-# Getting Started with Create React App
+# メモ書き
+## Reactに登場するメモ化を一通りさらう
+- React.memo
+- React.useMemo
+- React.useCallback
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## React.memo
+コンポーネント単位でメモ化する
+コンポーネントに渡す引数(props)が変更されなければメモ化されたコンポーネントを返す
 
-## Available Scripts
+## React.useMemo
+値をメモ化する
+CPUバウンドな処理の結果をメモ化するとよさそう
 
-In the project directory, you can run:
+## React.useCallback
+（コールバック）関数そのものをメモ化する
+内部実装的にはuseMemo
 
-### `yarn start`
+## 問.メモ化をなぜするのか
+### 答.再描画が悪だからである
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+上に登場するメソッドはすべて再描画を避けるために容易されている
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+Reactの考え方は、データドリブンな宣言的UIを実現する手段としてのライブラリを提供することである。
 
-### `yarn test`
+そのため、宣言されたUIの元となるデータが書き換わるとUIも変更される（必要がある）
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+UIの変更には、Reactで管理されるメモリ上の仮想DOMからブラウザの実DOMに反映するという処理があり、ここが場合によってボトルネックとなる
 
-### `yarn build`
+また、Reactは上記メソッドを用いない場合、親コンポーネントの再描画が走ると、子コンポーネントも再描画処理されるため、子コンポーネントに再描画の必要がなかったとしても無駄に再描画されることがある
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+これを避けるため、コンポーネントに渡される引数が変わらない限り、メモ化されたDOMを返すことでコンポーネントの再描画処理を省こうとしているのがReact.memoの存在意義である
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+またReact上で管理される値(useState)が変わらない限り、同じ値を返すのがuseMemoである
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+さらに、React上で管理される値(useState)が変わらない限り処理をせず、変わったときにのみ処理をする関数を返すのがuseCallbackである
 
-### `yarn eject`
+例えば次のようなケースではクリック毎にonClickに渡すためのコールバックが生成される
+```tsx
+<button onClick={()=>{
+    console.log("AAA");
+}}>
+    押(推)して!!!
+</button>
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+コールバック関数そのものは参照型であるため、同じ内容の処理であったとしても同じ関数とはみなされない(Javaで Object == Object が成り立たないのと同じ)
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+そのため、クリックごとに渡された値が異なるという判定になり、再描画の対象となってしまう
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+そこでクリック毎にコールバックを渡さないようにするために次のようにすることが考えられる
+```tsx
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+const handleClick = ()=>{
+    console.log("AAA");
+} 
 
-## Learn More
+<button onClick={handleClick}>
+    押(推)して!!!
+</button>
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+このようにすると、クリックごとにonClickごとにコールバックが生成されなくなる
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+ただし、コンポーネント全体を再描画する必要がある場合はコールバックもすべて生成されなおす
+
+これらの再生成を可能な限り減らすには、必要のない箇所を別コンポーネントとして切り出して、切り出したコンポーネントをメモ化することである
+

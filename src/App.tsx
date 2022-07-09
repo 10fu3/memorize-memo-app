@@ -1,26 +1,45 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, {ChangeEventHandler, useState} from "react";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+const SubComponentA = ()=>{
+    console.log("SubComponentA が描画された")
+    return <div>
+        a
     </div>
-  );
 }
 
-export default App;
+const SubComponentB = React.memo((props:{callback:(s:string)=>number})=>{
+    console.log("SubComponentB が描画された")
+    const [value,setValue] = useState('');
+    const handleInput:ChangeEventHandler<HTMLInputElement> = (e)=>{
+        setValue(e.target.value)
+    }
+    return <div style={{
+        border:"solid 1px #000"
+    }}>
+        b
+        <div><input onChange={handleInput}/></div>
+        <div>{props.callback(value)}</div>
+    </div>
+})
+
+const App = ()=>{
+    console.log("App が描画された")
+    const [value,setValue] = useState('');
+    const handleInput:ChangeEventHandler<HTMLInputElement> = (e)=>{
+        setValue(e.target.value)
+    }
+
+    const handleCount = React.useCallback((s:string)=>{
+        return s.length
+    },[])
+
+    return <>
+        parent
+        <div>{value}</div>
+        <div><input onChange={handleInput}/></div>
+        <SubComponentA/>
+        <SubComponentB callback={handleCount}/>
+    </>
+}
+
+export default App
